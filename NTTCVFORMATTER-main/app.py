@@ -138,27 +138,31 @@ st.markdown("""
 #  UTILITY FUNCTIONS
 # ═══════════════════════════════════════════════════════════════
 
-@st.cache_resource(show_spinner="Loading embedding model…")
+@st.cache_resource(show_spinner="Loading embedding model (first run downloads ~100MB, takes ~1 min)…")
 def load_embedding_model():
-    """Load the real local model (pre-downloaded via download_model.py)."""
+    """
+    Load embedding model.
+    - Local dev: loads instantly from models/all-MiniLM-L6-v2/ (pre-downloaded)
+    - Streamlit Cloud / first run: downloads from HuggingFace Hub automatically
+    """
     from sentence_transformers import SentenceTransformer
 
     project_root = Path(__file__).parent
     local_model_path = project_root / "models" / "all-MiniLM-L6-v2"
 
+    # Try local cache first (instant for local dev)
     if local_model_path.exists():
         try:
             return SentenceTransformer(str(local_model_path))
-        except Exception as e:
-            raise RuntimeError(
-                f"❌ Failed to load local model.\n\nError: {str(e)}\n\n"
-                f"Re-download with: `python download_model.py`"
-            )
+        except Exception:
+            pass  # Fall through to HF download
 
-    raise RuntimeError(
-        f"❌ **Embedding model not found.** Run once:\n\n"
-        f"```\npython download_model.py\n```\n\n"
-        f"Then refresh this page.\n\nExpected at: `{local_model_path}`"
+    # Streamlit Cloud / first run: download from HuggingFace Hub
+    # (Linux cloud environments have no SSL/proxy issues)
+    hf_cache = os.path.join(os.path.expanduser("~"), ".cache", "sentence-transformers")
+    return SentenceTransformer(
+        "sentence-transformers/all-MiniLM-L6-v2",
+        cache_folder=hf_cache,
     )
 
 
